@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tmr-gates"
+version = "0.1.0"
+description = "Publication gates of The Machine Record: deterministic rules that decide whether a verified robot incident may be published."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "Volodymyr Zolotukhin", email = "hello@themachinerecord.com" }]
+keywords = ["verification", "journalism", "robotics", "incident", "registry", "fact-checking"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Text Processing :: Filters",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://themachinerecord.com/methodology"
+Repository = "https://github.com/vzolot/tmr-gates"
+Registry = "https://themachinerecord.com"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tmr_gates"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
