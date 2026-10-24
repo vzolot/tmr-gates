@@ -1,0 +1,35 @@
+name: publish
+# Builds the package and publishes it to PyPI through trusted publishing
+# (no API token in the repository). The PyPI project must list this workflow
+# as a trusted publisher: owner vzolot, repository tmr-gates, workflow
+# publish.yml, environment pypi.
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .[test] build
+      - run: pytest -q
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 (2026-10-24)
+
+- All inline comments translated into English; no change in behaviour, the tests are unchanged.
+- Publishing workflow for PyPI (trusted publishing on a version tag).
+
 ## 0.1.0 (2026-10-23)
 
 First release, extracted unchanged from the pipeline of The Machine Record.

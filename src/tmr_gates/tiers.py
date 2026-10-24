@@ -13,38 +13,37 @@ TIER1_DOMAINS = {
     "wsj.com", "nytimes.com", "washingtonpost.com", "theguardian.com", "cnbc.com",
     "npr.org", "abcnews.go.com", "cbsnews.com", "nbcnews.com", "cnn.com",
     "latimes.com", "sfchronicle.com", "politico.com", "axios.com",
-    # Регулятори і суди: первинні документи, а не переказ
+    # Regulators and courts: primary documents, not accounts of them.
     "osha.gov", "nhtsa.gov", "cpsc.gov", "saferproducts.gov", "justice.gov",
     "sec.gov", "ftc.gov", "europa.eu", "gov.uk", "canada.ca",
-    "courtlistener.com",  # докети RECAP/PACER: первинний судовий документ
-    # Неангломовні джерела (пакет NLnet/EA Funds, з 23.10.2026): агенції,
-    # суспільні мовники й національні газети. Таблоїди й державні агенції
-    # Китаю свідомо не тут: вони лишаються tier 2 і не можуть підтверджувати
-    # тяжкий випадок самі.
-    # Німеччина
+    "courtlistener.com",  # RECAP/PACER dockets: a primary court record
+    # Non-English sources (added 2026-10-23): wire agencies, public broadcasters
+    # and national newspapers. Tabloids and Chinese state agencies are left out
+    # on purpose: they stay tier 2 and cannot carry a grave case alone.
+    # Germany
     "tagesschau.de", "spiegel.de", "faz.net", "sueddeutsche.de", "zeit.de", "dpa.com",
     "handelsblatt.com", "heise.de",
-    # Франція
+    # France
     "lemonde.fr", "lefigaro.fr", "afp.com", "francetvinfo.fr", "france24.com", "lesechos.fr",
-    # Італія
+    # Italy
     "ansa.it", "corriere.it", "repubblica.it", "rainews.it", "ilsole24ore.com",
-    # Іспанія
+    # Spain
     "elpais.com", "efe.com", "rtve.es", "elmundo.es", "lavanguardia.com",
-    # Нідерланди
+    # Netherlands
     "nos.nl", "nrc.nl", "volkskrant.nl", "anp.nl", "nu.nl",
-    # Польща
+    # Poland
     "pap.pl", "tvn24.pl", "wyborcza.pl", "rp.pl", "polsatnews.pl",
-    # Японія
+    # Japan
     "nhk.or.jp", "www3.nhk.or.jp", "asahi.com", "mainichi.jp", "yomiuri.co.jp", "nikkei.com",
     "kyodonews.jp", "jiji.com",
-    # Корея
+    # Korea
     "yna.co.kr", "yonhapnews.co.kr", "kbs.co.kr", "chosun.com", "joongang.co.kr", "hani.co.kr",
     "koreaherald.com", "koreatimes.co.kr",
-    # Китай, Гонконг, Тайвань: незалежні або міжнародні редакції
+    # China, Hong Kong, Taiwan: independent or international newsrooms
     "scmp.com", "caixin.com", "caixinglobal.com", "cna.com.tw", "sixthtone.com",
 }
 
-# Суфікси доменів регуляторів і урядів поза США: первинні документи, tier 1.
+# Domain suffixes of regulators and governments outside the US: primary documents, tier 1.
 GOV_SUFFIXES = (
     ".gov", ".gov.uk", ".gouv.fr", ".bund.de", ".gov.it", ".gob.es", ".overheid.nl",
     ".gov.pl", ".go.jp", ".go.kr", ".gov.cn", ".gov.hk", ".gov.tw", ".gov.au", ".gc.ca",
@@ -55,24 +54,25 @@ TIER3_HINTS = (
     "reddit.com", "medium.com", "substack.com", "blogspot.", "wordpress.",
     "x.com", "twitter.com", "facebook.com", "instagram.com", "youtube.com",
     "tiktok.com", "quora.com", "pinterest.com",
-    # Портали-ретранслятори. Вони не повідомляють, а передруковують чужий текст,
-    # тому як підтвердження не варті нічого: це та сама стаття під іншим доменом,
-    # і саме через них найчастіше спрацьовував прапор single_source_wrappers.
+    # Syndication portals. They do not report, they reprint someone else's text,
+    # so as corroboration they are worth nothing: it is the same article under
+    # another domain, and they were the usual trigger of the
+    # single_source_wrappers flag.
     "yahoo.com", "msn.com", "aol.com", "news.google.com", "flipboard.com",
     "newsbreak.com", "smartnews.com", "inkl.com", "headtopics.com", "biztoc.com",
 )
 
-# Точні домени, які не можуть підтверджувати інцидент. Не тому що «жовті», а
-# тому що реєстр публікує звинувачення на адресу названих компаній: те, що йде
-# в справу, має витримати юриста цієї компанії. Таблоїд або сайт, який переказує
-# чужу новину своїми словами, цього не витримає.
+# Exact domains that cannot corroborate an incident. Not because they are
+# "yellow", but because the register publishes allegations against named
+# companies: whatever goes into a case has to survive that company's lawyer.
+# A tabloid, or a site that retells someone else's news in its own words, will not.
 TIER3_DOMAINS = {
-    # Таблоїди
+    # Tabloids
     "dailymail.com", "dailymail.co.uk", "nypost.com", "mirror.co.uk",
     "metro.co.uk", "thesun.co.uk", "express.co.uk", "dailystar.co.uk",
     "nydailynews.com", "ibtimes.com", "ibtimes.co.uk", "people.com",
     "the-sun.com", "radaronline.com",
-    # Переписувачі й контент-ферми: власного репортажу не ведуть
+    # Rewrite farms and content farms: no reporting of their own
     "futurism.com", "interestingengineering.com", "techeblog.com",
     "uniladtech.com", "unilad.com", "ladbible.com", "dailydot.com",
     "boredpanda.com", "indy100.com", "motorbiscuit.com", "carscoops.com",
@@ -82,23 +82,24 @@ TIER3_DOMAINS = {
 
 
 def tier_of(domain: str | None) -> int:
-    """1 - агенції, національні медіа, регулятори; 2 - регіональні і галузеві;
-    3 - блоги, соцмережі, таблоїди, ретранслятори: самі по собі ніколи не досить.
+    """1: agencies, national media, regulators; 2: regional and trade press;
+    3: blogs, social networks, tabloids, syndication portals, never enough alone.
 
-    Невідомий домен лишається tier2 навмисно. Місцева газета, яка одна написала
-    про інцидент на своєму складі, - головна цінність реєстру, і вимагати від неї
-    потрапити в білий список означало б втратити саме те, чого немає в агенцій.
+    An unknown domain stays tier 2 on purpose. A local paper that alone wrote
+    about an incident at a warehouse in its town is the register's main value,
+    and requiring it to be on an allow-list would lose exactly what the wire
+    agencies do not have.
     """
     if not domain:
         return 3
     d = domain.lower().removeprefix("www.")
     if d in TIER1_DOMAINS or any(d.endswith(s) or d == s.lstrip(".") for s in GOV_SUFFIXES):
         return 1
-    # Збіг за доменом, а не за підрядком.
+    # Match by domain, not by substring.
     #
-    # `any(h in d ...)` демотував `vox.com`, `linux.com` і `phoenix.com` через
-    # підрядок `x.com`, тобто відбирав корроборацію у справжніх видань. Хінт
-    # тепер має збігтися з доменом або бути його суфіксом на межі крапки.
+    # `any(h in d ...)` demoted `vox.com`, `linux.com` and `phoenix.com` through
+    # the substring `x.com`, taking corroboration away from real outlets. A hint
+    # now has to equal the domain or be its suffix at a dot boundary.
     if d in TIER3_DOMAINS or any(
         d == h.rstrip(".") or d.endswith("." + h.rstrip(".")) or
         (h.endswith(".") and h[:-1] in d.split("."))
@@ -106,9 +107,10 @@ def tier_of(domain: str | None) -> int:
     ):
         return 3
 
-    # Невідомий домен лишається tier 2 свідомо: регіональних видань тисячі, і
-    # перелічити їх наперед неможливо, а демотувати всі невідомі до tier 3
-    # означало б вимкнути корроборацію взагалі. Ціну цього припущення несуть
-    # не ці ворота, а вимога tier 1 для тяжких випадків з названою компанією -
-    # саме там, де помилка коштує найдорожче.
+    # An unknown domain stays tier 2 deliberately: there are thousands of
+    # regional outlets, listing them in advance is impossible, and demoting every
+    # unknown one to tier 3 would switch corroboration off altogether. The cost
+    # of this assumption is carried not by this gate but by the tier 1
+    # requirement for grave cases with a named company, exactly where a mistake
+    # is most expensive.
     return 2

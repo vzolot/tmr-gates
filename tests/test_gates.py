@@ -1,8 +1,8 @@
-"""Тести воріт §8.2. Критерії приймання 6 і 9 з ТЗ перевіряються тут.
+"""Tests of the publication gates.
 
-Ці правила - єдине, що стоїть між автоматом і публічним звинуваченням названої
-компанії. Тому вони перевіряються кодом, а не оглядом: "здається, працює" тут
-недостатньо.
+These rules are the only thing standing between an automaton and a public
+accusation against a named company. So they are checked by code, not by
+review: "it seems to work" is not enough here.
 
     pytest, or: python tests/test_gates.py
 """
@@ -29,12 +29,13 @@ OK_VERIFICATION = {
     "same_event": True,
     "verification_score": 0.93,
     "disagreements": [],
-    # Тип події - така сама умова публікації, як дата чи два домени: реєстр
-    # інцидентів не публікує того, що інцидентом не є.
+    # The event type is as much a publication condition as the date or two
+    # domains: a register of incidents does not publish what is not an incident.
     "incident_type": "collision",
     "severity": "minor_injury",
-    # Ворота check_robot_subject (03.10) вимагають робота в описі: позов родини,
-    # застреленої агентом ICE, пройшов усе інше й був опублікований як TMR-0776.
+    # The check_robot_subject gate (2026-10-03) requires a robot in the account:
+    # a lawsuit by the family of a person shot by an ICE agent passed everything
+    # else and was published as TMR-0776.
     "title": "Delivery robot struck a pedestrian in Austin",
     "summary": "A Starship delivery robot collided with a pedestrian on Tuesday.",
     "category": "delivery",
@@ -65,13 +66,13 @@ def main() -> int:
     print("\nGates for automatic publication\n")
     ok = True
 
-    # Критерій 6, перша половина: один tier3 не публікується ні за яких умов
+    # A single tier 3 source never publishes, under any conditions
     d = evaluate(cfg=CFG, sources=[TIER3], verification=OK_VERIFICATION,
                  adversarial=OK_ADVERSARIAL, company="Starship", severity="minor_injury", incident_type="collision",
                  date_of_incident="2026-07-20")
     ok &= check("single tier3 source never publishes", not d.publish)
 
-    # Навіть кілька tier3 доменів недостатньо
+    # Even several tier 3 domains are not enough
     tier3b = {**TIER3, "url": "https://x.com/e", "domain": "x.com",
               "article_text": "Different wording about a robot hitting someone. " * 20}
     d = evaluate(cfg=CFG, sources=[TIER3, tier3b], verification=OK_VERIFICATION,
@@ -79,22 +80,22 @@ def main() -> int:
                  date_of_incident="2026-07-20")
     ok &= check("several tier3 domains still never publish", not d.publish)
 
-    # Критерій 6, друга половина: два tier1 і score >= 0.85 публікується самі
+    # Two tier 1 sources with a score above the threshold publish on their own
     d = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
                  adversarial=OK_ADVERSARIAL, company="Starship", severity="minor_injury", incident_type="collision",
                  date_of_incident="2026-07-20")
     ok &= check("two tier1 sources with score 0.93 publish", d.publish)
 
-    # Посилене правило для звинувачень: тяжка шкода вимагає tier1
+    # The stronger rule for accusations: grave harm requires tier 1
     d = evaluate(cfg=CFG, sources=[TIER2, {**TIER2, "url": "https://wfaa.com/f",
                  "domain": "wfaa.com", "article_text": "Another regional account entirely. " * 20}],
                  verification=OK_VERIFICATION, adversarial=OK_ADVERSARIAL,
                  company="Starship", severity="fatality", incident_type="collision", date_of_incident="2026-07-20")
     ok &= check("named company plus fatality needs a tier1 source", not d.publish)
 
-    # Дві домени для смертельного випадку з названою компанією тепер замало:
-    # `grave_min_sources` стояв рівний звичайному порогу, тобто посилена вимога
-    # нічого не посилювала.
+    # Two domains are no longer enough for a fatality with a named company:
+    # `grave_min_sources` used to equal the ordinary threshold, so the stronger
+    # requirement strengthened nothing.
     d = evaluate(cfg=CFG, sources=[TIER1, TIER2], verification=OK_VERIFICATION,
                  adversarial=OK_ADVERSARIAL, company="Starship", severity="fatality", incident_type="collision",
                  date_of_incident="2026-07-20")
@@ -105,21 +106,21 @@ def main() -> int:
                  date_of_incident="2026-07-20")
     ok &= check("named company plus fatality with three sources publishes", d.publish)
 
-    # Низький score
+    # Low score
     d = evaluate(cfg=CFG, sources=[TIER1, TIER1B],
                  verification={**OK_VERIFICATION, "verification_score": 0.7},
                  adversarial=OK_ADVERSARIAL, company="Starship", severity="minor_injury", incident_type="collision",
                  date_of_incident="2026-07-20")
     ok &= check("verification score below threshold blocks", not d.publish)
 
-    # Суперечності в ключових фактах
+    # Contradictions in key facts
     d = evaluate(cfg=CFG, sources=[TIER1, TIER1B],
                  verification={**OK_VERIFICATION, "disagreements": ["sources name different cities"]},
                  adversarial=OK_ADVERSARIAL, company="Starship", severity="minor_injury", incident_type="collision",
                  date_of_incident="2026-07-20")
     ok &= check("disagreement on key facts blocks", not d.publish)
 
-    # Критерій 9: блокуючий прапор адверсарного проходу
+    # A blocking flag from the adversarial pass
     d = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
                  adversarial={"risk_score": 0.2, "red_flags": [],
                               "blocking": [{"flag": "unattributed_accusation",
@@ -127,7 +128,7 @@ def main() -> int:
                  company="Starship", severity="minor_injury", incident_type="collision", date_of_incident="2026-07-20")
     ok &= check("unattributed accusation is blocked by the adversarial pass", not d.publish)
 
-    # Дата в майбутньому
+    # A date in the future
     future = (date.today() + timedelta(days=10)).isoformat()
     d = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
                  adversarial=OK_ADVERSARIAL, company="Starship", severity="minor_injury", incident_type="collision",
@@ -173,10 +174,10 @@ def main() -> int:
     ok &= check("one real outlet plus a portal reprint is not two sources", not d.publish)
 
     print("\nEarly exits must never be more permissive than the gates\n")
-    # Обидва передворіття існують лише щоб не платити моделі за матеріал, який
-    # ворота однаково відкинуть. Тому єдина властивість, яку треба доводити: що
-    # провал передворіття завжди означає провал evaluate на тих самих даних.
-    # Зворотне не потрібне - ворота мають право відкидати більше.
+    # Both early exits exist only so that the model is not paid for material the
+    # gates will reject anyway. So the one property to prove is that a failed
+    # early exit always means a failed evaluate on the same data. The converse
+    # is not needed: the gates are allowed to reject more.
     syndicated_pair = [TIER1, {**TIER1, "url": "https://otheroutlet.com/h",
                                "domain": "otheroutlet.com"}]
     cases = [
@@ -204,7 +205,7 @@ def main() -> int:
         ok &= check(f"{name}: skipped early", skipped)
         ok &= check(f"{name}: gates would have refused it anyway", not full.publish)
 
-    # І навпаки: те, що ворота публікують, жодне передворіття не має зупинити.
+    # And the other way round: what the gates publish, no early exit may stop.
     pre = precheck_sources(cfg=CFG, sources=[TIER1, TIER1B])
     early = precheck_verification(cfg=CFG, verification=OK_VERIFICATION,
                                   date_of_incident="2026-07-20", date_precision="day",
@@ -212,31 +213,33 @@ def main() -> int:
     ok &= check("a publishable case passes both early exits", pre.publish and early.publish)
 
     print("\nWhat counts as a disagreement\n")
-    # Ворота відмовляли за будь-який пункт списку `disagreements`, а модель
-    # перелічувала там і мовчання джерела, і різницю в переказі. Так набралось
-    # 59 справ із позначкою Disputed, і на цій частці спрацював вимикач
-    # публікації. Тепер суттєвість оцінює модель, а вираз - запобіжник.
+    # The gates refused for any item in the `disagreements` list, and the model
+    # listed there a source's silence and differences in retelling alike. That
+    # produced 59 cases marked Disputed, and the publishing circuit breaker
+    # tripped on that share. Now the model judges materiality and the
+    # expression is a safeguard.
 
-    # 1. Нинішня форма: рішення моделі про суттєвість поважається.
+    # 1. The current form: the model's decision on materiality is respected.
     for label, item, keep in [
         ("model says material", {"fact": "robot_model", "material": True,
                                  "detail": "S1 identifies the H1, S2 the G1."}, True),
         ("model says immaterial", {"fact": "other", "material": False,
                                    "detail": "S1 calls it a performance, S2 a routine."}, False),
         ("material but no detail is not dismissed", {"fact": "severity", "material": True}, True),
-        # Рішення моделі остаточне навіть тоді, коли пояснення виглядає
-        # слабким. Вираз, що читав `detail`, скасовував справжні суперечності:
-        # "This is a contradiction, not merely a difference in wording" гинуло
-        # від слова "wording", а "S3 does not mention the injury count" - від
-        # мовчання третього джерела. Що модель назвала суттєвим, лишається.
+        # The model's decision is final even when the explanation looks weak.
+        # The expression that read `detail` cancelled real contradictions: "This
+        # is a contradiction, not merely a difference in wording" died on the
+        # word "wording", and "S3 does not mention the injury count" on the
+        # silence of the third source. What the model called material stays.
         ("model decides, the regex does not overrule it",
          {"fact": "date", "material": True,
           "detail": "S1 gives the publication date as Feb 8, S3 as Feb 9."}, True),
     ]:
         ok &= check(label, bool(material_disagreements([item])) == keep)
 
-    # 2. Старі записи - голі рядки, які судить сам лише вираз. Усі до одного
-    #    взяті з `audit_log` продакшену, з тих справ, що зупинили публікацію.
+    # 2. Old records are bare strings judged by the expression alone. Every one
+    #    is taken from the production audit log, from the cases that stopped
+    #    publishing.
     for text, is_real in [
         ("S1 identifies the robot as the Unitree H1, while S2 identifies it as the G1.", True),
         ("S3 describes 'two unoccupied cars crashed into a manned vehicle,' which contradicts "
@@ -264,9 +267,9 @@ def main() -> int:
                     kept == is_real)
 
     print("\nWhat the register counts as an incident\n")
-    # Три з чотирьох останніх публікацій виявились не інцидентами: дебют акцій
-    # на біржі й два партнерства. Адверсарний прохід має для цього прапорець і
-    # жодного разу його не поставив, тому межа тепер у коді.
+    # Three of the four most recent publications turned out not to be
+    # incidents: a stock market debut and two partnerships. The adversarial
+    # pass has a flag for this and never once raised it, so the line is now in code.
     for label, itype, severity, is_incident in [
         ("collision with injury", "collision", "minor_injury", True),
         ("fatality", "fatality", "fatality", True),
@@ -298,7 +301,7 @@ def main() -> int:
         ok &= check(label + (" is kept" if is_incident else " is refused"),
                     (reason is None) == is_incident)
 
-    # Словниковий тип не має ламатись від опису навколо нього.
+    # A vocabulary type must not break because of the description around it.
     ok &= check("a described collision still reads as a collision",
                 check_is_incident("rear-end collision", "minor_injury") is None)
     ok &= check("'non collision' is not smuggled in by the word collision",
@@ -314,9 +317,10 @@ def main() -> int:
     )
     ok &= check("named spokesperson is kept", "Daniel Reeves" in (kept or ""))
 
-    # Шаблон імені - це просто два слова з великої літери, тому без цих винятків
-    # він знімав "Boston Dynamics" і "San Francisco" нарівні з прізвищами. Це не
-    # косметика: зникла назва компанії робить справу про цю компанію безглуздою.
+    # The name pattern is just two capitalised words, so without these
+    # exceptions it removed "Boston Dynamics" and "San Francisco" along with
+    # surnames. This is not cosmetic: a vanished company name makes a case about
+    # that company meaningless.
     known = {"Boston Dynamics", "Waymo"}
     for text, must_keep in [
         ("A Boston Dynamics robot struck a worker at the plant.", "Boston Dynamics"),
@@ -334,7 +338,7 @@ def main() -> int:
     ok &= check("company kept and person removed in the same sentence",
                 "Nimble Robotics" in (mixed or "") and "John Carter" not in (mixed or ""))
 
-    # Судові тексти 22.10.2026: велика всередині прізвища, ініціал, місяць посередині
+    # Court texts of 2026-10-22: a capital inside a surname, an initial, a month in the middle
     for text, gone in [
         ("On April 25, 2019, George McGee was driving a Tesla when he dropped his phone.", "McGee"),
         ("Dr. Kelsey A. Walsh used a Globus Excelsius GPS robot to operate on Maxwell D. Nalder "
@@ -359,7 +363,7 @@ def main() -> int:
         ok &= check(f"kept: {must_keep}", must_keep in (out or ""))
 
     print("\nCourt documents\n")
-    # Позовна заява з текстом - публічний запис, їй не треба другого видання.
+    # A complaint with its text is a public record; it needs no second outlet.
     COURT = {"url": "https://www.courtlistener.com/docket/1/x-v-y/", "domain": "courtlistener.com",
              "title": "Doe v. Robot Co. (D. Mass., No. 1:26-cv-1)", "published_at": "2026-03-20",
              "tier": 1, "article_text": "COMPLAINT. Plaintiff alleges the surgical robot arm moved unexpectedly. " * 40}

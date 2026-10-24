@@ -4,12 +4,18 @@ The publication gates of [The Machine Record](https://themachinerecord.com), an 
 
 The register publishes without human pre-moderation. A language model answers one question, "do these sources describe the same real-world event, and how well", and an adversarial pass looks for defamation, satire, unattributed accusations and stale news. Everything after that is rules. This package is those rules: they decide whether a verified event may be published, what evidence a grave allegation needs, which sources count, and which names must never appear in public text. Every rule is deterministic, documented here and covered by tests, so anyone can run the register's own cases through the same gates and get the same decisions.
 
-The code is extracted unchanged from the production pipeline. Inline comments are in Ukrainian, the working language of the project; this README documents every rule in English.
+The code is extracted unchanged from the production pipeline. The inline comments record why each rule exists, usually a case in the register that went wrong without it; this README documents the rules themselves.
 
 ## Install
 
 ```
-pip install git+https://github.com/vzolot/tmr-gates@v0.1.0
+pip install tmr-gates
+```
+
+or straight from the repository:
+
+```
+pip install git+https://github.com/vzolot/tmr-gates@v0.1.1
 ```
 
 Python 3.9 or newer. No runtime dependencies.

@@ -9,8 +9,8 @@ injury attributed to a named company, blocking flags from the adversarial
 pass, a risk ceiling, a separate policy for court records, and a stripper for
 the names of private individuals.
 
-Inline comments are in Ukrainian, the working language of the project; the
-README documents every rule in English.
+The comments record why each rule exists, usually a case in the register that
+went wrong without it. The README documents the rules themselves.
 """
 from __future__ import annotations
 
@@ -36,20 +36,20 @@ class Decision:
 
 
 def independent_domains(sources: list[dict]) -> list[str]:
-    """Домени, що лишились після склеювання синдикації.
+    """Domains left after syndication has been collapsed.
 
-    Один і той самий текст, перевиданий трьома сайтами холдингу, це одне
-    джерело, а не три. Ловимо за схожістю тіла статті: перевидання майже
-    ніколи не переписують текст.
+    The same text republished by three sites of one holding is one source, not
+    three. Caught by similarity of the article body: reprints almost never
+    rewrite the text.
     """
     kept: list[tuple[str, str]] = []
     for s in sources:
         domain = (s.get("domain") or "").lower().removeprefix("www.")
         if not domain:
             continue
-        # Tier3 не рахується за незалежне підтвердження. Інакше «дві незалежні
-        # газети» могли скластися з однієї справжньої і одного reddit-треду, і
-        # ворота пропускали б звинувачення, підперте постом у соцмережі.
+        # Tier 3 does not count as independent corroboration. Otherwise "two
+        # independent papers" could be one real one plus a reddit thread, and
+        # the gates would pass an allegation propped up by a social media post.
         if tier_of(domain) > 2:
             continue
         body = re.sub(r"\W+", " ", (s.get("article_text") or "")[:2500]).strip().lower()
@@ -66,32 +66,34 @@ def independent_domains(sources: list[dict]) -> list[str]:
     return [d for d, _ in kept]
 
 
-# Розбіжності, які насправді ними не є.
+# Disagreements that are not really disagreements.
 #
-# Ворота дискваліфікували справу за БУДЬ-який пункт списку `disagreements`, а
-# модель на прохання "перелічи розбіжності" сумлінно перелічувала все: мовчання
-# джерела, різницю в переказі, дати публікації статей, округлення часу. Так
-# накопичилось 59 справ із публічною позначкою Disputed, і частка перевалила
-# поріг, через що пайплайн вимкнув собі публікацію.
+# The gates used to disqualify a case for ANY item in the `disagreements` list,
+# and the model, asked to "list the disagreements", dutifully listed everything:
+# a source's silence, a difference in retelling, the publication dates of the
+# articles, rounding of the time. That accumulated 59 cases with a public
+# Disputed mark, and the share crossed the threshold at which the pipeline
+# switches its own publishing off.
 #
-# Тепер суттєвість оцінює сама модель (`material` у verify.GEN_RULES) - вона
-# бачить тексти, а регулярний вираз бачить лише переказ. Вираз лишається
-# запобіжником двох призначень: він судить старі записи, зроблені до появи
-# поля, і знімає пункти, де модель поставила material=true, але сама ж описала
-# розбіжність як мовчання чи дрібницю. Він тільки прибирає, ніколи не додає.
+# Materiality is now judged by the model itself (`material` in the verification
+# rules): it sees the texts, the regular expression sees only a retelling. The
+# expression remains a safeguard with two purposes: it judges old records made
+# before the field existed, and it drops items where the model set
+# material=true but itself described the disagreement as silence or a trifle.
+# It only removes, never adds.
 _NOT_A_CONTRADICTION = re.compile(
     r"(?i)("
-    # мовчання: тільки два твердження можуть суперечити одне одному
+    # silence: only two statements can contradict each other
     r"do(?:es)? not (?:specify|mention|name|state|identify|give|provide|report|confirm)"
     r"|not (?:specified|mentioned|named|stated|identified|given|provided|reported)"
     r"|no (?:source )?(?:mention|specifies|provides|gives|states|confirms)"
     r"|without (?:naming|specifying|mentioning)|omits?\b|silent (?:on|about)"
     r"|only .{0,30}(?:mentions|identifies|specifies)"
     r"|lacks? (?:the |a )?(?:detail|specific|mention)"
-    # дата публікації статті - не дата події
+    # the publication date of an article is not the date of the event
     r"|publication date|date the article|article'?s? date|when the article"
     r"|published \d|dateline"
-    # модель сама назвала розбіжність дрібною або можливо уявною
+    # the model itself called the disagreement minor or possibly imaginary
     r"|minor (?:discrepancy|difference|timing)|slight(?:ly|)? (?:differ|discrepan)"
     r"|may refer to the same|adjacent (?:cities|towns)"
     r"|more generally|a turn of phrase|wording"
@@ -100,28 +102,30 @@ _NOT_A_CONTRADICTION = re.compile(
 
 
 def material_disagreements(disagreements: list) -> list[str]:
-    """Лишає тільки ті розбіжності, які є суперечністю двох джерел про факт.
+    """Keep only the disagreements that are a contradiction between two sources about a fact.
 
-    Приймає обидві форми: словники з полем `material` від нинішньої моделі і
-    голі рядки зі старих записів, які судяться самим лише виразом.
+    Accepts both forms: dicts with a `material` field from the current model,
+    and bare strings from old records, which are judged by the expression alone.
     """
     kept = []
     for d in disagreements or []:
         if isinstance(d, dict):
-            # Рішення моделі остаточне, і вираз до нього не застосовується.
+            # The model's decision is final and the expression is not applied to it.
             #
-            # Раніше вираз ішов і по `detail`, "як запобіжник". Але `detail` -
-            # це пояснення, і промпт прямо просить написати, чому це є або не є
-            # суперечністю. Тому фраза "This is a contradiction, not merely a
-            # difference in wording" містила слово "wording" і скасовувала
-            # розбіжність про різних виробників; "S3 does not mention the
-            # injury count" скасовувала розбіжність про кількість загиблих.
-            # Запобіжник, що читає пояснення, скасовує саме те, що пояснюють.
+            # The expression used to run over `detail` too, "as a safeguard". But
+            # `detail` is an explanation, and the prompt explicitly asks why this
+            # is or is not a contradiction. So the phrase "This is a
+            # contradiction, not merely a difference in wording" contained the
+            # word "wording" and cancelled a disagreement about different makers;
+            # "S3 does not mention the injury count" cancelled a disagreement
+            # about the number of dead. A safeguard that reads the explanation
+            # cancels exactly what is being explained.
             if d.get("material"):
                 kept.append(str(d.get("detail") or d.get("fact") or "unspecified disagreement"))
             continue
 
-        # Старі записи - голі рядки без рішення моделі. Тільки їх і судить вираз.
+        # Old records are bare strings without a model decision. Only those are
+        # judged by the expression.
         text = str(d).strip()
         if not text or _NOT_A_CONTRADICTION.search(text):
             continue
@@ -129,43 +133,44 @@ def material_disagreements(disagreements: list) -> list[str]:
     return kept
 
 
-# Словник подій, які реєстр веде. Список закритий свідомо: реєстр інцидентів
-# знає, що таке інцидент, і все, що в нього не лягає, інцидентом не стає від
-# того, що про це написали три видання.
+# The vocabulary of events the register keeps. The list is closed on purpose: a
+# register of incidents knows what an incident is, and whatever does not fit
+# does not become one because three outlets wrote about it.
 #
-# Привід: 3 з 4 останніх публікацій виявились не інцидентами - дебют акцій
-# Unitree на біржі, партнерство Serve з Grubhub, партнерство Uber з Lucid і
-# Nuro. Реєстр сортується за датою, тому саме це бачив перший відвідувач.
-# Адверсарний прохід має для цього прапорець `no_incident` і жодного разу його
-# не поставив: risk_score 0.10-0.15, порожній red_flags. Судження моделі тут
-# ненадійне, а перелік типів - ні.
+# The occasion: 3 of the 4 most recent publications turned out not to be
+# incidents, Unitree's stock market debut, a Serve partnership with Grubhub, an
+# Uber partnership with Lucid and Nuro. The register is sorted by date, so this
+# is what the first visitor saw. The adversarial pass has a `no_incident` flag
+# for this and never once raised it: risk_score 0.10 to 0.15, empty red_flags.
+# The model's judgement is unreliable here; a list of types is not.
 INCIDENT_TYPES = {
     "collision", "crash", "malfunction", "injury", "fatality", "death", "fire",
     "near_miss", "entrapment", "runaway", "property_damage",
-    # Події без потерпілого, але з дією регулятора чи суду - це теж матеріал
-    # реєстру: саме вони показують, чим інцидент закінчився.
+    # Events without a victim but with an act of a regulator or a court are
+    # material for the register too: they show how an incident ended.
     "recall", "investigation", "lawsuit", "settlement", "fine", "citation",
 }
 
-# Тяжкість, за якої щось справді сталося. Далі тип уже не питаємо.
+# Severities at which something really happened. Past these the type is not asked.
 HARM_SEVERITIES = {"minor_injury", "serious_injury", "fatality", "property_damage"}
 
-# Подія без потерпілого - це все одно подія: зіткнення, в якому нікого не
-# зачепило, лишається зіткненням. Тому для `no_harm` достатньо, щоб тип
-# упізнавався зі словника. Виняток - типи, які самі стверджують шкоду: "injury"
-# при `no_harm` це не подія, а суперечність у власних свідченнях.
+# An event without a victim is still an event: a collision in which nobody was
+# touched remains a collision. So for `no_harm` it is enough that the type is
+# recognised from the vocabulary. The exception is the types that themselves
+# assert harm: "injury" with `no_harm` is not an event but a contradiction in
+# the account's own testimony.
 NO_HARM_KEEPS = INCIDENT_TYPES - {"injury", "fatality", "death"}
 
 
 def incident_type_key(incident_type: str | None) -> str:
-    """Звести тип події до одного слова словника, або порожнє, якщо не звівся."""
+    """Reduce an event type to one word of the vocabulary, or empty if it does not reduce."""
     text = (incident_type or "").strip().lower().replace("-", "_").replace(" ", "_")
     if text in INCIDENT_TYPES:
         return text
-    # Заперечення перед типом скасовує тип. Розбиття по "_" робило з
-    # "non_collision" окремий токен "collision", тобто зіткнення, якого не
-    # було, зараховувалось як зіткнення - рівно те, від чого цей коментар
-    # обіцяв захищати.
+    # A negation before the type cancels the type. Splitting on "_" turned
+    # "non_collision" into a separate token "collision", so a collision that did
+    # not happen counted as a collision, exactly what this comment promised to
+    # guard against.
     if re.search(r"(?i)\b(non|no|not|without|denied|unconfirmed|alleged)\b", text.replace("_", " ")):
         return ""
     for word in text.split("_"):
@@ -175,17 +180,17 @@ def incident_type_key(incident_type: str | None) -> str:
 
 
 def check_is_incident(incident_type: str | None, severity: str | None) -> str | None:
-    """Причина відмови, якщо це не інцидент. None, якщо інцидент.
+    """The reason for refusal if this is not an incident. None if it is.
 
-    Вирішує тяжкість, а не тип. Тип модель пише вільним текстом, і холостий
-    прохід по реєстру показав, чим це закінчується: правило, побудоване на
-    типі, знімало з публікації Cruise, який протягнув пішохода двадцять футів
-    ("pedestrian struck and dragged by autonomous vehicle" - у словнику такого
-    немає), і відкликання ста пʼяти робота-таксі Zoox. Якщо постраждала людина
-    або пошкоджено майно, це інцидент, хоч би як його назвали.
+    Severity decides, not type. The model writes the type as free text, and a
+    dry run over the register showed where that leads: a rule built on type
+    withdrew Cruise dragging a pedestrian twenty feet ("pedestrian struck and
+    dragged by autonomous vehicle" is not in the vocabulary) and a recall of
+    a hundred and five Zoox robotaxis. If a person was hurt or property was
+    damaged, it is an incident whatever it was called.
 
-    Питати тип має сенс лише там, де не сталося нічого: саме туди й потрапляли
-    біржовий дебют і партнерства.
+    Asking the type only makes sense where nothing happened: that is exactly
+    where the stock market debut and the partnerships ended up.
     """
     sev = (severity or "").lower()
     if sev in HARM_SEVERITIES:
@@ -204,12 +209,13 @@ def check_is_incident(incident_type: str | None, severity: str | None) -> str | 
 
 
 def court_document(sources: list[dict]) -> bool:
-    """Чи є серед джерел судовий документ із власним текстом.
+    """Whether the sources include a court document with its own text.
 
-    Позовна заява або рішення суду - публічний запис, а не чийсь переказ, тому
-    двох незалежних видань до нього не треба: реєстр і обіцяє "дію регулятора
-    або суду" як подію. Але лише з текстом: сам рядок у реєстрі суду (назва,
-    номер, дата) ще не каже, що сталось."""
+    A complaint or a court decision is a public record, not someone's account
+    of it, so two independent outlets are not needed on top: the register
+    promises "an act of a regulator or a court" as an event. But only with the
+    text: a bare row in a court index (name, number, date) does not yet say
+    what happened."""
     for s in sources:
         domain = (s.get("domain") or "").lower().removeprefix("www.")
         if domain == "courtlistener.com" and len(s.get("article_text") or "") >= 1500:
@@ -217,18 +223,18 @@ def court_document(sources: list[dict]) -> bool:
     return False
 
 
-# Прапори адверсарного проходу, які не блокують справу на судовому документі.
+# Adversarial flags that do not block a case built on a court document.
 COURT_NON_BLOCKING = {"named_private_individual", "unattributed_accusation", "stale_as_new"}
 
 
 def min_score(cfg: Config, sources: list[dict]) -> float:
-    """Поріг верифікації: для справи на судовому документі нижчий.
+    """The verification threshold, lower for a case built on a court document.
 
-    Модель оцінює впевненість за згодою джерел між собою; один документ
-    без другого джерела чесно отримує близько 0.8 (Velez v. Tesla: 0.82 з
-    датою, тяжкістю і компанією), і загальний поріг 0.85 відсік би кожен
-    такий позов. Документ сам по собі є первинним записом, тому для нього
-    діє court_min_verification_score.
+    The model rates its confidence by how well the sources agree with each
+    other; a single document with no second source honestly gets about 0.8
+    (Velez v. Tesla: 0.82 with date, severity and company), and the general
+    threshold of 0.85 would cut off every such lawsuit. The document is a
+    primary record in itself, so court_min_verification_score applies to it.
     """
     base = float(cfg["min_verification_score"])
     if court_document(sources):
@@ -241,13 +247,14 @@ def required_domains(cfg: Config, sources: list[dict]) -> int:
 
 
 def precheck_sources(*, cfg: Config, sources: list[dict]) -> Decision:
-    """Умови §8.2, які не залежать від моделі взагалі.
+    """The conditions that do not depend on the model at all.
 
-    Це рівно перевірки 2 і 3 з `evaluate`, витягнуті наперед. Джерела з одного
-    домену або самі лише tier3 провалять ворота хоч би що сказала модель, тож
-    платити за два проходи по такому матеріалу немає сенсу. Строгий підмножинний
-    зв'язок з `evaluate` тут важливіший за економію: ця функція має тільки
-    відсіювати те, що й так було б відсіяне, і ніколи нічого не дозволяти.
+    These are exactly checks 2 and 3 of `evaluate`, pulled forward. Sources from
+    one domain, or tier 3 alone, fail the gates whatever the model says, so
+    paying for two model passes over such material makes no sense. The strict
+    subset relation to `evaluate` matters more than the saving here: this
+    function may only sift out what would have been sifted out anyway, and
+    never allow anything.
     """
     decision = Decision(publish=True)
     domains = independent_domains(sources)
@@ -262,11 +269,12 @@ def precheck_sources(*, cfg: Config, sources: list[dict]) -> Decision:
     return decision
 
 
-# Предмет реєстру - комерційні фізичні роботи й автономні машини. Знахідка
-# може пройти всі інші ворота, не маючи до них стосунку: 2026-10-03 швидка
-# смуга опублікувала позов родини застреленої агентом ICE, бо дві незалежні
-# газети, дата, наслідок і тип "lawsuit" були на місці. Модель відповідає на
-# питання про подію, а не про те, чи є в ній робот; це перевіряє код.
+# The subject of the register is commercial physical robots and autonomous
+# machines. A find can pass every other gate without being about them: on
+# 2026-10-03 the fast lane published a lawsuit by the family of a person shot by
+# an ICE agent, because two independent papers, a date, an outcome and the type
+# "lawsuit" were all in place. The model answers a question about the event, not
+# about whether there is a robot in it; this is checked in code.
 _ROBOT_SUBJECT = re.compile(
     r"(?i)\b(robot\w*|cobot\w*|humanoid\w*|robotaxi\w*|autonomous|self-driving|"
     r"driverless|automated (?:guided|vehicle|machine|system|forklift)|\bagv\b|"
@@ -282,7 +290,7 @@ _ROBOT_CATEGORIES = {
 
 
 def check_robot_subject(verification: dict) -> str | None:
-    """None, якщо в описі події є комерційний робот або автономна машина."""
+    """None if the account of the event contains a commercial robot or an autonomous machine."""
     if verification.get("category") in _ROBOT_CATEGORIES and verification.get("robot_model"):
         return None
     text = " ".join(
@@ -390,11 +398,11 @@ def evaluate(
     if not adversarial:
         return decision.fail("adversarial review did not complete")
 
-    # 1. Та сама подія
+    # 1. The same event
     if not verification.get("same_event"):
         decision.fail("sources do not describe the same event")
 
-    # 2. Незалежні домени (судовий документ з текстом достатній сам по собі)
+    # 2. Independent domains (a court document with text is enough on its own)
     domains = independent_domains(sources)
     decision.checks["independent_domains"] = domains
     need = required_domains(cfg, sources)
@@ -402,21 +410,22 @@ def evaluate(
     if len(domains) < need:
         decision.fail(f"only {len(domains)} independent domain(s), need {need}")
 
-    # 3. Рівні джерел: tier3 ніколи не достатній сам по собі
+    # 3. Source tiers: tier 3 is never enough on its own
     tiers = sorted(tier_of(d) for d in domains)
     decision.checks["tiers"] = tiers
     if not tiers or min(tiers) > 2:
         decision.fail("no tier1 or tier2 source among independent domains")
 
-    # Політика для судових документів (Вова, 22.10.2026): позов чи рішення суду
-    # є первинним записом звинувачення. Заголовок каже "Lawsuit alleges", імена
-    # приватних осіб знімає стрипер, тож правило тяжких, прапори про названих
-    # осіб, неатрибутоване звинувачення і "старе як нове" (позов 2026 про подію
-    # 2023 з датою події в картці) не блокують, а ризик допускається до
-    # court_max_risk_score.
+    # Policy for court documents (editorial decision of 2026-10-22): a complaint
+    # or a court decision is the primary record of an allegation. The title says
+    # "Lawsuit alleges", the names of private individuals are removed by the
+    # stripper, so the grave rule, the flags about named individuals,
+    # unattributed accusation and "old as new" (a 2026 lawsuit about a 2023
+    # event, with the event date on the card) do not block, and risk is allowed
+    # up to court_max_risk_score.
     court = court_document(sources)
 
-    # 4. Посилене правило для звинувачень
+    # 4. The stronger rule for accusations
     grave = severity in set(cfg["grave_severities"])
     decision.checks["grave"] = grave
     if grave and company and court:
@@ -429,19 +438,19 @@ def evaluate(
         if cfg["grave_requires_tier1"] and (not tiers or tiers[0] != 1):
             decision.fail(f"named company with {severity}: needs at least one tier1 source")
 
-    # 4b. Це взагалі інцидент
+    # 4b. Is this an incident at all
     not_incident = check_is_incident(incident_type, severity)
     decision.checks["incident_type"] = incident_type
     if not_incident:
         decision.fail(not_incident)
 
-    # 5. Суперечності в ключових фактах
+    # 5. Contradictions in key facts
     disagreements = material_disagreements(verification.get("disagreements"))
     decision.checks["disagreements"] = disagreements
     if disagreements:
         decision.fail(f"sources disagree on key facts: {'; '.join(disagreements)[:200]}")
 
-    # 6. Пороги
+    # 6. Thresholds
     score = float(verification.get("verification_score") or 0)
     risk = float(adversarial.get("risk_score") or 0)
     decision.checks["verification_score"] = score
@@ -453,7 +462,7 @@ def evaluate(
     if risk > risk_cap:
         decision.fail(f"risk score {risk:.2f} above {risk_cap}")
 
-    # 7. Блокуючі прапори адверсарного проходу
+    # 7. Blocking flags of the adversarial pass
     blocking = adversarial.get("blocking") or []
     decision.checks["blocking_flags"] = [f.get("flag") for f in blocking]
     waived = []
@@ -466,14 +475,15 @@ def evaluate(
     if waived:
         decision.checks["flags_waived"] = waived
 
-    # 8. Санітарні перевірки дат
+    # 8. Sanity checks on dates
     #
-    # Реєстр хронологічний: головний графік будується за роком події, і справа,
-    # яку не можна розмістити в часі, з нього просто зникає, лишаючись у
-    # підсумковому числі. Тому дата обов'язкова, але з точністю до місяця -
-    # "у липні" в новинах зустрічається частіше за точне число, і відкидати
-    # такі випадки означало б втрачати реальні інциденти заради охайності.
-    # Сам рік без місяця замалий: він розтягує подію на дванадцять місяців.
+    # The register is chronological: the main chart is built by the year of the
+    # event, and a case that cannot be placed in time simply disappears from it
+    # while still being counted in the total. So the date is required, but to
+    # the month: "in July" is more common in the news than an exact day, and
+    # rejecting such cases would lose real incidents for the sake of tidiness.
+    # A bare year without a month is too little: it stretches the event over
+    # twelve months.
     decision.checks["date_precision"] = date_precision
     if not date_of_incident or date_precision not in ("day", "month"):
         decision.fail(
@@ -505,32 +515,32 @@ def _parse_date(value) -> date | None:
         return None
 
 
-# Імена приватних осіб вирізаються кодом, а не лише промптом: промпт можна
-# обійти формулюванням, регулярка - ні.
+# The names of private individuals are cut out by code, not only by the prompt:
+# a prompt can be talked around by phrasing, a regular expression cannot.
 _TITLE_PREFIX = r"(?:Mr|Mrs|Ms|Dr|Prof|Officer|Judge|Sheriff|Sen|Rep|Gov)\.?\s+"
-# Два або три слова з великої літери. Три - бо "Regina Allen Elsea" за
-# двослівним шаблоном перетворювалась на "a person Elsea", тобто прізвище
-# лишалось на сторінці. Ініціал посередині теж рахується за слово.
-# Слово імені: з великої літери, з можливою великою всередині (McGee, DeSantis,
-# MacArthur) або апострофом (O'Brien). Раніше "George McGee" збігався як
-# "George Mc", і на сторінку виходило "a personGee" (TMR-0891, 22.10.2026).
+# Two or three capitalised words. Three, because "Regina Allen Elsea" under the
+# two-word pattern became "a person Elsea", leaving the surname on the page. A
+# middle initial counts as a word too.
+# A name word: capitalised, possibly with a capital inside (McGee, DeSantis,
+# MacArthur) or an apostrophe (O'Brien). "George McGee" used to match as
+# "George Mc", and the page showed "a personGee" (TMR-0891, 2026-10-22).
 _NAME_TOKEN = r"[A-Z][a-z]{1,15}(?:(?:'|)[A-Z][a-z]{1,15})?"
 _NAME = rf"{_NAME_TOKEN}(?:\s+(?:[A-Z]\.|{_NAME_TOKEN}))(?:\s+[A-Z][a-z]{{2,20}}(?:[A-Z][a-z]{{1,15}})?)?"
 
-# Вік поруч з іменем - найсильніша ознака приватної особи в цьому корпусі:
-# "Regina Allen Elsea, 20, was killed", "Christopher C. Pardue, 71, died".
-# Ловимо і те, чого загальний шаблон не бачить: одне слово ("Ramanjaneyulu")
-# і написання без латиниці.
+# An age next to a name is the strongest sign of a private individual in this
+# corpus: "Regina Allen Elsea, 20, was killed", "Christopher C. Pardue, 71,
+# died". This also catches what the general pattern does not see: a single word
+# ("Ramanjaneyulu") and non-Latin spellings.
 _NAME_WITH_AGE = re.compile(
     r"\b([^\W\d_][\w'\-]{1,20}(?:\s+(?:[A-Z]\.|[^\W\d_][\w'\-]{1,20})){0,2})"
     r"(?=,\s*\d{1,3}\s*,)"
 )
 
-# "a 22-year-old trainee engineer Ramanjaneyulu was killed" - вік стоїть перед
-# іменем, тому загальний шаблон його не бачить, а слово з великої літери після
-# вікової конструкції це майже завжди потерпілий.
-# Прапорець нечутливості обмежений групою навмисно: (?i) на весь шаблон робив
-# [A-Z] байдужим до регістру, і перший прохід зняв слово "was".
+# "a 22-year-old trainee engineer Ramanjaneyulu was killed": the age comes
+# before the name, so the general pattern does not see it, and a capitalised
+# word after an age construction is almost always the victim.
+# The case-insensitive flag is limited to the group on purpose: (?i) over the
+# whole pattern made [A-Z] case-blind, and the first pass removed the word "was".
 _NAME_AFTER_AGE = re.compile(
     r"(?i:\d{1,3}[- ]year[- ]old\s+(?:[a-z]+\s+){0,3})([A-Z][\w'\-]{2,24})"
 )
@@ -541,7 +551,7 @@ _PUBLIC_ROLE = re.compile(
 )
 
 
-# Юридичні форми: те, що стоїть поруч, - організація, а не людина.
+# Legal forms: whatever stands next to them is an organisation, not a person.
 _CORPORATE = re.compile(
     r"(?i)\b(inc|llc|l\.l\.c|ltd|limited|corp|corporation|co|company|gmbh|ag|s\.?a|"
     r"b\.?v|plc|oy|ab|kk|pte|pty|holdings|group|technologies|robotics|systems|labs|"
@@ -549,15 +559,16 @@ _CORPORATE = re.compile(
     r"administration|agency|commission|police|county|city|state|llp|firm|attorneys?|"
     r"counsel|associates|partners)\b"
 )
-# Слова, поруч з якими Title Case означає людину, а не машину чи установу.
-# Без цієї умови шаблон знімав "Zeekr Rt", "Shanghai Stock Exchange", "On June"
-# і перетворював заголовок на "a Zoox autonomous vehicle a person was involved".
-# Обіцянку тримає не жадібність шаблону, а те, що всі сильні ознаки людини
-# (вік поруч, звертання) обробляються окремо і в контексті не потребують.
+# Words next to which Title Case means a person rather than a machine or an
+# institution. Without this condition the pattern removed "Zeekr Rt", "Shanghai
+# Stock Exchange", "On June" and turned a title into "a Zoox autonomous vehicle
+# a person was involved". The promise is kept not by the pattern's greed but by
+# the fact that all the strong signs of a person (an age next to the name, a
+# form of address) are handled separately and need no context.
 _PERSON_CONTEXT = re.compile(
-    # Префікси беруться з \w*, а не в межах слова: \binjur\b не збігався з
-    # "injured", і правило мовчки не спрацьовувало на найчастішому формулюванні
-    # в цьому корпусі.
+    # Prefixes are taken with \w*, not within a word boundary: \binjur\b did not
+    # match "injured", and the rule silently failed on the most common wording
+    # in this corpus.
     r"(?i)\b(?:killed|kills|died|dies|dead|death|fatally|fatality|injur\w*|hurt|"
     r"wounded|hospitalis\w*|hospitaliz\w*|victim\w*|worker\w*|employee\w*|"
     r"technician\w*|engineer\w*|pedestrian\w*|cyclist\w*|patient\w*|passenger\w*|"
@@ -565,26 +576,27 @@ _PERSON_CONTEXT = re.compile(
     r"suffer\w*|crush\w*|struck|strikes|drag\w*|pinn\w*|trapp\w*|amputat\w*|"
     r"burn\w*|sued|suing|plaintiff\w*|defendant\w*|estate of|father|mother|son|daughter|"
     r"husband|wife|his |her |"
-    # Судові й медичні тексти (позови, 22.10.2026): лікар і пацієнт названі
-    # поруч з операцією, а не з "травмою" - "Dr. X used a robot to operate on Y".
+    # Court and medical texts (lawsuits, 2026-10-22): a doctor and a patient are
+    # named next to an operation, not next to an "injury": "Dr. X used a robot
+    # to operate on Y".
     r"surgeon\w*|surgery|operat\w*|doctor\w*|physician\w*|deficit\w*|diagnos\w*|"
     r"treat\w*|underwent|driving|drove|veteran\w*)"
 )
 
-# Title Case, який у цьому корпусі майже ніколи не є людиною.
+# Title Case that in this corpus is almost never a person.
 _NOT_A_PERSON = re.compile(
-    # Марки й моделі машин ідуть окремим переліком: у титулах NHTSA вони стоять
-    # у дужках ("(Hyundai Ioniq 5)") поруч зі словами про потерпілих, тому
-    # контекстна умова їх не рятує.
+    # Makes and models of vehicles get their own list: in NHTSA titles they stand
+    # in brackets ("(Hyundai Ioniq 5)") next to words about the injured, so the
+    # context condition does not save them.
     r"(?i)\b(hyundai|toyota|jaguar|chrysler|ford|honda|zeekr|lucid|kia|nissan|"
     r"chevrolet|tesla|bmw|mercedes|volkswagen|volvo|ioniq|highlander|pacifica|"
     r"i-pace|palletizer|forklift|conveyor|crane|"
-    # Топонімічні суфікси: друге слово видає адресу надійніше за будь-який список.
+    # Street suffixes: the second word gives away an address more reliably than any list.
     r"drive|avenue|road|street|boulevard|lane|highway|freeway|parkway|square|"
     r"park|plaza|bridge|tunnel|airport|gigafactory|campus|mall|hollywood|gardens|"
-    # Сторони світу починають назви місць, а числівники - переліки машин.
+    # Compass points begin place names, and numerals begin lists of machines.
     r"west|east|north|south|three|two|four|five|six|seven|eight|nine|ten|"
-    # Країни трапляються в кожному другому заголовку і людьми не є.
+    # Countries appear in every other title and are not people.
     r"china|usa|japan|korea|germany|france|india|canada|mexico|brazil|australia|"
     r"britain|spain|italy|poland|sweden|norway|finland|israel|singapore|"
     r"vehicle\w*|robot\w*|truck\w*|car|cars|van|vans|drone\w*|exchange|stock|"
@@ -603,18 +615,20 @@ _PLACE_PREP = re.compile(r"(?i)\b(in|at|near|outside|inside|from|across|along)\s
 _MONTH_OR_DAY = re.compile(
     r"(?i)^(january|february|march|april|may|june|july|august|september|october|"
     r"november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$")
-# Слово одразу після збігу, яке робить з нього назву місця чи закону, а не
-# людину: "Rosa L. Jones Drive", "Ralph H. Johnson VAMC", "Federal Tort Claims Act".
+# A word right after the match that makes it the name of a place or a law
+# rather than a person: "Rosa L. Jones Drive", "Ralph H. Johnson VAMC",
+# "Federal Tort Claims Act".
 _FACILITY_AFTER = re.compile(
     r"^\s+(?:Drive|Road|Street|Avenue|Boulevard|Lane|Highway|Way|Court|VAMC|VA\b|"
     r"Medical|Hospital|Center|Centre|Clinic|Act|Claims|System|Plaza|Park|Bridge|"
     r"Building|County|University|School|Airport|Station|Plant|Facility|Foundation|"
     r"Institute|Memorial|Surgical|Robotics|Technologies|Industries)\b")
 
-# "... in San Francisco, CA" - двобуквений код штату після коми означає місце.
+# "... in San Francisco, CA": a two-letter state code after a comma means a place.
 _STATE_CODE = re.compile(r"^\s*,\s*[A-Z]{2}\b")
-# Топоніми, які трапляються в цій предметній області щодня і не мають юридичної
-# форми поруч. Список свідомо короткий: він доповнює правила, а не замінює їх.
+# Place names that come up daily in this subject area and have no legal form
+# next to them. The list is short on purpose: it supplements the rules, it does
+# not replace them.
 _KNOWN_PLACES = {
     "san francisco", "los angeles", "new york", "san jose", "santa monica",
     "san diego", "las vegas", "san antonio", "fort worth", "salt lake city",
@@ -655,8 +669,9 @@ def strip_private_names(
     removed: list[str] = []
 
     def _not_a_person(name: str) -> bool:
-        """Службове слово у збігу: "Tesla Model", "Vinci Surgical System". Місяць
-        посередині не рахується: "Dawn May Bunch" - людина, хоч May і місяць."""
+        """A function word inside the match: "Tesla Model", "Vinci Surgical
+        System". A month in the middle does not count: "Dawn May Bunch" is a
+        person even though May is a month."""
         toks = unarticled(name).split()
         for i, tok in enumerate(toks):
             if 0 < i < len(toks) - 1 and _MONTH_OR_DAY.match(tok):
@@ -665,37 +680,38 @@ def strip_private_names(
                 return True
         return False
 
-    # Заголовок у Title Case ("Employee Is Pinned Against Heated Mold By Robotic
-    # Arm") складається з великих літер цілком, і загальний шаблон перетворює
-    # його на "a person a person a person". Такі рядки судимо лише сильними
-    # ознаками: вік поруч і звертання. Саме про це попереджав коментар вище про
-    # первинні документи регуляторів.
+    # A Title Case heading ("Employee Is Pinned Against Heated Mold By Robotic
+    # Arm") is capitalised throughout, and the general pattern turns it into
+    # "a person a person a person". Such lines are judged only by the strong
+    # signs: an age next to the name and a form of address. This is what the
+    # warning above about primary regulator documents is about.
     words = [w for w in re.findall(r"[A-Za-z][\w'\-]*", text) if len(w) > 2]
-    # 0.8, не 0.6: речення позову "Dr. X used a Globus Excelsius GPS robot on
-    # Y at Merit Health River Oaks in Mississippi" має 61% великих літер і
-    # проходило як Title Case заголовок, тобто без загального проходу.
+    # 0.8, not 0.6: the complaint sentence "Dr. X used a Globus Excelsius GPS
+    # robot on Y at Merit Health River Oaks in Mississippi" is 61% capitalised
+    # and passed as a Title Case heading, that is, without the general pass.
     title_case = len(words) >= 4 and sum(w[0].isupper() for w in words) / len(words) > 0.8
 
     def unarticled(name: str) -> str:
-        """"The Waymo" - це та сама Waymo, а не людина на прізвище Waymo."""
+        """"The Waymo" is the same Waymo, not a person surnamed Waymo."""
         return re.sub(r"(?i)^(the|a|an)\s+", "", name).strip()
 
     def replace(match: re.Match) -> str:
         name = match.group(0)
-        # Контекст береться з рядка, по якому йде саме ця заміна (match.string),
-        # а не з вихідного text: після першого проходу зміщення вже інші, і
-        # "at Merit Health" перевірялось не на тому місці.
+        # Context is taken from the string this replacement runs over
+        # (match.string), not from the original text: after the first pass the
+        # offsets differ, and "at Merit Health" was being checked at the wrong place.
         low = unarticled(name).lower()
         if low in protected_lower or low in _KNOWN_PLACES:
             return name
         if any(low.startswith(kp + " ") for kp in _KNOWN_PLACES):
             return name  # "San Francisco Bay", "New York City"
-        # Назва компанії всередині збігу теж захищає: "Baidu Apollo" і
-        # "Three Waymo" це та сама компанія з зайвим словом поруч.
+        # A company name inside the match protects it too: "Baidu Apollo" and
+        # "Three Waymo" are the same company with a stray word next to it.
         if any(pn in low for pn in protected_lower if len(pn) > 3):
             return name
-        # Перше слово назви компанії теж захищає: "Globus Excelsius" поруч з
-        # "surgery" інакше став би "a person", бо в реєстрі компанія "Globus Medical".
+        # The first word of a company name protects as well: "Globus Excelsius"
+        # next to "surgery" would otherwise become "a person", because the
+        # register's company is "Globus Medical".
         if any(tok in protected_firsts for tok in low.split()):
             return name
         window = match.string[max(0, match.start() - 90) : match.end() + 90]
@@ -703,24 +719,25 @@ def strip_private_names(
             return name
         if _not_a_person(name):
             return name
-        # Сам по собі Title Case нічого не доводить. Ім'я знімається лише тоді,
-        # коли поруч сказано, що з людиною щось сталося.
+        # Title Case alone proves nothing. A name is removed only when the text
+        # next to it says something happened to a person.
         if not _PERSON_CONTEXT.search(window):
             return name
-        # Юридичну форму шукаємо впритул, а не в широкому вікні: "Amazon" за
-        # тридцять символів від імені працівника не робить це ім'я компанією.
-        # Юридичну форму шукаємо впритул праворуч. Ліворуч - лише вузький
-        # перелік слів про фірму: широкий список тут давав "Nimble Robotics
-        # injured John Carter", де назва компанії за два слова захищала людину.
-        # Ініціал посередині ("Maxwell D. Nalder") - майже напевно людина:
-        # "Health" за кілька слів праворуч ("at Merit Health") цього не скасовує.
+        # The legal form is looked for right next to the match, not in a wide
+        # window: "Amazon" thirty characters from a worker's name does not make
+        # that name a company. To the right, right next to it. To the left, only
+        # a narrow list of words about a firm: a wide list gave "Nimble Robotics
+        # injured John Carter", where the company name two words away protected
+        # the person.
+        # A middle initial ("Maxwell D. Nalder") is almost certainly a person:
+        # "Health" a few words to the right ("at Merit Health") does not cancel that.
         has_initial = re.search(r"\s[A-Z]\.\s", name) is not None
         if not has_initial and _CORPORATE.search(match.string[match.start() : match.end() + 24]):
             return name
         if _FIRM_BEFORE.search(match.string[max(0, match.start() - 20) : match.start()]):
             return name
-        # "in East Hollywood", "at Berkman Drive", "near Austin Gigafactory" -
-        # прийменник місця перед Title Case означає адресу, а не потерпілого.
+        # "in East Hollywood", "at Berkman Drive", "near Austin Gigafactory": a
+        # preposition of place before Title Case means an address, not a victim.
         if _PLACE_PREP.search(match.string[: match.start()]):
             return name
         if _STATE_CODE.match(match.string[match.end() :]):
@@ -731,11 +748,11 @@ def strip_private_names(
         return "a person"
 
     def replace_group(match: re.Match) -> str:
-        """Те саме рішення, але знімається лише перша група, не весь збіг."""
+        """The same decision, but only the first group is removed, not the whole match."""
         name = match.group(1)
         low = unarticled(name).lower()
-        # Загальний шаблон уже міг спрацювати тут: без цього "a person, 20,"
-        # перетворювалось на "a a person, 20,".
+        # The general pattern may already have fired here: without this,
+        # "a person, 20," became "a a person, 20,".
         if "a person" in low or low in {"a", "an", "the", "person"}:
             return match.group(0)
         if low in protected_lower or low in _KNOWN_PLACES:
@@ -747,9 +764,9 @@ def strip_private_names(
         removed.append(name)
         return match.group(0).replace(name, "a person", 1)
 
-    # Вікові конструкції йдуть ПЕРШИМИ, по оригінальному тексту. У зворотному
-    # порядку загальний шаблон уже лишав "a person", і віковий бачив у цьому
-    # слово "person" як прізвище: виходило "a a person, 20,".
+    # The age constructions go FIRST, over the original text. In the reverse
+    # order the general pattern had already left "a person", and the age pattern
+    # saw the word "person" in it as a surname: the result was "a a person, 20,".
     cleaned = _NAME_WITH_AGE.sub(replace_group, text)
     cleaned = _NAME_AFTER_AGE.sub(replace_group, cleaned)
     cleaned = re.sub(_TITLE_PREFIX + _NAME, replace, cleaned)
