@@ -17,7 +17,12 @@ from .gates import (
 )
 from .tiers import GOV_SUFFIXES, TIER1_DOMAINS, TIER3_DOMAINS, TIER3_HINTS, tier_of
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import version as _version
+
+    __version__ = _version("tmr-gates")
+except Exception:  # noqa: BLE001 - running from a checkout without installation
+    __version__ = "0.1.1"
 __all__ = [
     "COURT_NON_BLOCKING", "DEFAULTS", "Config", "Decision", "GOV_SUFFIXES", "TIER1_DOMAINS",
     "TIER3_DOMAINS", "TIER3_HINTS", "check_is_incident", "check_robot_subject", "court_document",
