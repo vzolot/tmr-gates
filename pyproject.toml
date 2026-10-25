@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tmr-gates"
-version = "0.2.0"
+version = "0.2.1"
 description = "Publication gates of The Machine Record: deterministic rules that decide whether a verified robot incident may be published."
 readme = "README.md"
 license = { text = "MIT" }

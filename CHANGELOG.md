@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 (2026-10-25)
+
+- Tier 1 gains Switzerland (NZZ, Tages-Anzeiger, SRF, RTS, swissinfo, Le Temps), Austria (ORF, Der Standard, Die Presse, APA), Kyunghyang Shinmun and RTHK.
+
 ## 0.2.0 (2026-10-25)
 
 - `evaluate()` takes `lang`, the collector's language code of the lead source. For press in a language other than English the risk ceiling is `foreign_max_risk_score` (0.5) and the flags `named_private_individual` and `stale_as_new` are waived and recorded (`FOREIGN_NON_BLOCKING`, `foreign_press()`). Every other rule is unchanged; a court record keeps the court policy whatever the language.

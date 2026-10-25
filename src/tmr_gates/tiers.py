@@ -38,9 +38,13 @@ TIER1_DOMAINS = {
     "kyodonews.jp", "jiji.com",
     # Korea
     "yna.co.kr", "yonhapnews.co.kr", "kbs.co.kr", "chosun.com", "joongang.co.kr", "hani.co.kr",
-    "koreaherald.com", "koreatimes.co.kr",
+    "koreaherald.com", "koreatimes.co.kr", "khan.co.kr",
+    # Switzerland and Austria (added 2026-10-25, after the first Swiss case
+    # arrived with NZZ counted as an unknown regional paper)
+    "nzz.ch", "tagesanzeiger.ch", "srf.ch", "rts.ch", "swissinfo.ch", "letemps.ch",
+    "orf.at", "derstandard.at", "diepresse.com", "apa.at",
     # China, Hong Kong, Taiwan: independent or international newsrooms
-    "scmp.com", "caixin.com", "caixinglobal.com", "cna.com.tw", "sixthtone.com",
+    "scmp.com", "caixin.com", "caixinglobal.com", "cna.com.tw", "sixthtone.com", "rthk.hk",
 }
 
 # Domain suffixes of regulators and governments outside the US: primary documents, tier 1.

@@ -24,7 +24,7 @@ try:
 
     __version__ = _version("tmr-gates")
 except Exception:  # noqa: BLE001 - running from a checkout without installation
-    __version__ = "0.2.0"
+    __version__ = "0.2.1"
 __all__ = [
     "COURT_NON_BLOCKING", "DEFAULTS", "Config", "Decision", "FOREIGN_NON_BLOCKING", "GOV_SUFFIXES", "TIER1_DOMAINS",
     "TIER3_DOMAINS", "TIER3_HINTS", "check_is_incident", "check_robot_subject", "court_document",

@@ -83,7 +83,7 @@ clean = strip_private_names("Worker John Smith, 34, was pinned by the arm.")
 
 `tier_of(domain)` returns 1, 2 or 3.
 
-- Tier 1: wire agencies, national outlets and public broadcasters in the US, UK, Germany, France, Italy, Spain, the Netherlands, Poland, Japan, Korea, Hong Kong and Taiwan; regulators and courts through government suffixes (`.gov`, `.gouv.fr`, `.bund.de`, `.go.jp`, `.go.kr`, `.europa.eu` and others); court dockets on CourtListener.
+- Tier 1: wire agencies, national outlets and public broadcasters in the US, UK, Germany, France, Italy, Spain, the Netherlands, Poland, Switzerland, Austria, Japan, Korea, Hong Kong and Taiwan; regulators and courts through government suffixes (`.gov`, `.gouv.fr`, `.bund.de`, `.go.jp`, `.go.kr`, `.europa.eu` and others); court dockets on CourtListener.
 - Tier 2: every unknown domain, on purpose. Regional papers are where most incidents first appear, and demoting the unknown would switch corroboration off. The price of that assumption is paid by rule 4, where it matters most.
 - Tier 3: social networks, blogs, video platforms, tabloids, content farms and syndication portals that republish other outlets' text under their own domain.
 
