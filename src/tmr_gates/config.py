@@ -19,6 +19,12 @@ DEFAULTS: dict[str, Any] = {
     # Court documents are allowed a higher risk score because the "accusation"
     # is the filing itself, attributed and on the record.
     "court_max_risk_score": 0.75,
+    # Local press in a language other than English (editorial decision of
+    # 2026-10-25): a one-outlet account of a plant accident in Gunma reads as
+    # riskier to the adversarial pass than a wire story, although the facts are
+    # the same kind. Still two independent domains, still the grave rule, but
+    # the risk ceiling sits between press and court records.
+    "foreign_max_risk_score": 0.5,
     # Independent domains required before anything is published.
     "min_independent_domains": 2,
     # Severities for which a named company needs three sources and a tier 1.

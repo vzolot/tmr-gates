@@ -226,6 +226,21 @@ def court_document(sources: list[dict]) -> bool:
 # Adversarial flags that do not block a case built on a court document.
 COURT_NON_BLOCKING = {"named_private_individual", "unattributed_accusation", "stale_as_new"}
 
+# Adversarial flags that do not block a case from press in a language other
+# than English (editorial decision of 2026-10-25). Local press names the
+# injured worker and writes "yesterday"; the register's name stripper removes
+# the name before publication and rule 8 still demands a correct event date,
+# so these two flags describe the source, not a defect of the case. An
+# unattributed accusation keeps blocking: the stripper cannot fix that.
+FOREIGN_NON_BLOCKING = {"named_private_individual", "stale_as_new"}
+
+
+def foreign_press(lang: str | None) -> bool:
+    """Whether the lead source was collected from press in a language other
+    than English. `lang` is the collector's locale code (de, ja, ko ...); None
+    or "en" means the English feeds."""
+    return bool(lang) and lang.lower() != "en"
+
 
 def min_score(cfg: Config, sources: list[dict]) -> float:
     """The verification threshold, lower for a case built on a court document.
@@ -378,14 +393,17 @@ def evaluate(
     date_of_incident: str | None,
     date_precision: str | None = "day",
     today: date | None = None,
+    lang: str | None = None,
 ) -> Decision:
     """Every publication rule at once. None outweighs another: a failure of
     any single rule means the case waits, there is no weighted sum.
 
     `sources` are dicts with url, domain, tier, published_at and article_text;
     `verification` is the model's cross-verification; `adversarial` is the
-    adversarial pass with risk_score and blocking flags. The returned Decision
-    carries the verdict, every failed rule and what each rule saw.
+    adversarial pass with risk_score and blocking flags; `lang` is the
+    language code of the lead source as the collector knew it (None or "en"
+    for English). The returned Decision carries the verdict, every failed rule
+    and what each rule saw.
     """
     today = today or date.today()
     decision = Decision(publish=True)
@@ -424,6 +442,12 @@ def evaluate(
     # event, with the event date on the card) do not block, and risk is allowed
     # up to court_max_risk_score.
     court = court_document(sources)
+    # Policy for press in other languages (editorial decision of 2026-10-25):
+    # rules 2, 3 and 4 are unchanged, the risk ceiling is foreign_max_risk_score
+    # and the two flags in FOREIGN_NON_BLOCKING are waived and recorded. A court
+    # record keeps its own, wider policy whatever the language.
+    foreign = foreign_press(lang) and not court
+    decision.checks["foreign_press"] = foreign
 
     # 4. The stronger rule for accusations
     grave = severity in set(cfg["grave_severities"])
@@ -458,7 +482,12 @@ def evaluate(
     threshold = min_score(cfg, sources)
     if score < threshold:
         decision.fail(f"verification score {score:.2f} below {threshold}")
-    risk_cap = float(cfg.get("court_max_risk_score") or 0.75) if court else float(cfg["max_risk_score"])
+    if court:
+        risk_cap = float(cfg.get("court_max_risk_score") or 0.75)
+    elif foreign:
+        risk_cap = float(cfg.get("foreign_max_risk_score") or 0.5)
+    else:
+        risk_cap = float(cfg["max_risk_score"])
     if risk > risk_cap:
         decision.fail(f"risk score {risk:.2f} above {risk_cap}")
 
@@ -469,6 +498,9 @@ def evaluate(
     for flag in blocking:
         name = flag.get("flag")
         if court and name in COURT_NON_BLOCKING:
+            waived.append(name)
+            continue
+        if foreign and name in FOREIGN_NON_BLOCKING:
             waived.append(name)
             continue
         decision.fail(f"adversarial block: {name}")

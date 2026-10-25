@@ -415,6 +415,57 @@ def main() -> int:
     bare = precheck_sources(cfg=CFG, sources=[{**COURT, "article_text": "Docket entry 1."}])
     ok &= check("bare docket entry alone does not pass", not bare.publish)
 
+    # Press in another language: two of the three complaint flags are waived,
+    # the risk ceiling is 0.5, everything else is the press policy.
+    local_flags = {**OK_ADVERSARIAL, "risk_score": 0.45, "blocking": [
+        {"flag": "named_private_individual", "evidence": "the worker is named"},
+        {"flag": "stale_as_new", "evidence": "the accident was in August"}]}
+    foreign_ok = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
+                          adversarial=local_flags, company="Robot Co.", severity="minor_injury",
+                          date_of_incident="2026-07-15", date_precision="day",
+                          today=date(2026, 7, 21), lang="de")
+    ok &= check("foreign press: named individual and stale flags do not block, risk 0.45 passes", foreign_ok.publish)
+    ok &= check("foreign press: waived flags are recorded",
+                sorted(foreign_ok.checks.get("flags_waived") or []) == ["named_private_individual", "stale_as_new"])
+    ok &= check("foreign press: policy recorded in checks", foreign_ok.checks.get("foreign_press") is True)
+    english_same = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
+                            adversarial=local_flags, company="Robot Co.", severity="minor_injury",
+                            date_of_incident="2026-07-15", date_precision="day",
+                            today=date(2026, 7, 21), lang="en")
+    ok &= check("English press: the same flags still block", not english_same.publish)
+    no_lang = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
+                       adversarial=local_flags, company="Robot Co.", severity="minor_injury",
+                       date_of_incident="2026-07-15", date_precision="day", today=date(2026, 7, 21))
+    ok &= check("no language given means English policy", not no_lang.publish)
+    foreign_accusation = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
+                                  adversarial={**local_flags, "blocking": [
+                                      {"flag": "unattributed_accusation", "evidence": "x"}]},
+                                  company="Robot Co.", severity="minor_injury",
+                                  date_of_incident="2026-07-15", date_precision="day",
+                                  today=date(2026, 7, 21), lang="ja")
+    ok &= check("foreign press: unattributed accusation still blocks", not foreign_accusation.publish)
+    foreign_risky = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
+                             adversarial={**OK_ADVERSARIAL, "risk_score": 0.6},
+                             company="Robot Co.", severity="minor_injury",
+                             date_of_incident="2026-07-15", date_precision="day",
+                             today=date(2026, 7, 21), lang="ko")
+    ok &= check("foreign press: risk 0.6 is above the 0.5 ceiling", not foreign_risky.publish)
+    foreign_single = evaluate(cfg=CFG, sources=[TIER1], verification=OK_VERIFICATION,
+                              adversarial=OK_ADVERSARIAL, company="Robot Co.", severity="minor_injury",
+                              date_of_incident="2026-07-15", date_precision="day",
+                              today=date(2026, 7, 21), lang="de")
+    ok &= check("foreign press: one domain is still not enough", not foreign_single.publish)
+    foreign_grave = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
+                             adversarial=OK_ADVERSARIAL, company="Robot Co.", severity="fatality",
+                             date_of_incident="2026-07-15", date_precision="day",
+                             today=date(2026, 7, 21), lang="de")
+    ok &= check("foreign press: the grave rule is unchanged", not foreign_grave.publish)
+    foreign_no_date = evaluate(cfg=CFG, sources=[TIER1, TIER1B], verification=OK_VERIFICATION,
+                               adversarial=local_flags, company="Robot Co.", severity="minor_injury",
+                               date_of_incident=None, date_precision=None,
+                               today=date(2026, 7, 21), lang="de")
+    ok &= check("foreign press: stale waiver does not excuse a missing date", not foreign_no_date.publish)
+
     print(f"\n{'ALL GATES PASS' if ok else 'GATE TESTS FAILED'}\n")
     return 0 if ok else 1
 

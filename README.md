@@ -73,8 +73,8 @@ clean = strip_private_names("Worker John Smith, 34, was pinned by the arm.")
 | 4 | A death or serious injury attributed to a named company needs three independent sources, one of them tier 1. A court record waives this: the allegation is the filing itself, on the record. | `grave_severities`, `grave_min_sources` 3, `grave_requires_tier1` true |
 | 4a | The event is an incident at all, not a product launch, a demo or an opinion piece; a commercial robot or automated machine is the subject. | |
 | 5 | No material disagreement between sources on company, model, date, place, severity or what happened. Silence is not a contradiction; a wording difference that is explained is not a contradiction. | |
-| 6 | Verification score at or above the threshold, risk score at or below the ceiling. Court records get a lower score bar and a higher risk ceiling. | `min_verification_score` 0.80, `max_risk_score` 0.35, `court_min_verification_score` 0.75, `court_max_risk_score` 0.75 |
-| 7 | No blocking flag from the adversarial pass: satire or fake, defamation pattern, single source behind many wrappers, named private individual, unattributed accusation, stale event presented as new. For court records the last three are waived and recorded, because a complaint is by nature an attributed accusation about named people on a past date. | |
+| 6 | Verification score at or above the threshold, risk score at or below the ceiling. Court records get a lower score bar and a higher risk ceiling; press in a language other than English gets a ceiling between the two. | `min_verification_score` 0.80, `max_risk_score` 0.35, `court_min_verification_score` 0.75, `court_max_risk_score` 0.75, `foreign_max_risk_score` 0.5 |
+| 7 | No blocking flag from the adversarial pass: satire or fake, defamation pattern, single source behind many wrappers, named private individual, unattributed accusation, stale event presented as new. For court records the last three are waived and recorded, because a complaint is by nature an attributed accusation about named people on a past date. For press in another language the named individual and stale flags are waived and recorded, because the name stripper removes the name and rule 8 still requires a correct event date. | |
 | 8 | Date sanity. The date of the incident is known to the day or the month, is not in the future, and is not later than the earliest publication by more than two days. | |
 
 `precheck_sources()` runs rules 2 and 3 before any model call, and `precheck_verification()` runs 1, 4a, 5, 6 and 8 after the first model pass, so a bundle that cannot pass is never sent to the expensive adversarial pass. Both are strict subsets of `evaluate()`: they can only reject what it would reject.
@@ -88,6 +88,10 @@ clean = strip_private_names("Worker John Smith, 34, was pinned by the arm.")
 - Tier 3: social networks, blogs, video platforms, tabloids, content farms and syndication portals that republish other outlets' text under their own domain.
 
 The lists live in `tmr_gates/tiers.py` and are the register's editorial judgement, published so it can be argued with.
+
+### Press in other languages
+
+`evaluate(..., lang="de")` applies the policy for press in a language other than English when `lang` is set and is not `en`; the register passes the locale code its collector used, never a language detected from the text. Rules 2, 3, 4 and 8 are unchanged: two independent domains, a tier 1 or tier 2 source, three sources for a grave allegation, a correct event date. What changes is rule 6 (`foreign_max_risk_score`, 0.5) and two flags of rule 7, `named_private_individual` and `stale_as_new`, which are waived and recorded in `checks["flags_waived"]`. The reasoning: a regional paper in Gunma or Bürstadt names the injured worker and writes "yesterday", and the adversarial pass reads that as risk; the register strips the name before publication and dates the event itself, so the flags describe the source, not the case. A court record keeps its own policy whatever the language.
 
 ### Court records
 
