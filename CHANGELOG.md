@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2 (2026-11-12)
+
+- Comments and tests use invented names. Earlier versions quoted names of private individuals from real cases as examples of what the stripper must remove; no rule or threshold changed.
+
 ## 0.2.1 (2026-10-25)
 
 - Tier 1 gains Switzerland (NZZ, Tages-Anzeiger, SRF, RTS, swissinfo, Le Temps), Austria (ORF, Der Standard, Die Presse, APA), Kyunghyang Shinmun and RTHK.

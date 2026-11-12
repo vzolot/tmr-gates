@@ -340,19 +340,19 @@ def main() -> int:
 
     # Court texts of 2026-10-22: a capital inside a surname, an initial, a month in the middle
     for text, gone in [
-        ("On April 25, 2019, George McGee was driving a Tesla when he dropped his phone.", "McGee"),
-        ("Dr. Kelsey A. Walsh used a Globus Excelsius GPS robot to operate on Maxwell D. Nalder "
-         "at Merit Health River Oaks in Mississippi.", "Nalder"),
-        ("Dr. Kelsey A. Walsh used a Globus Excelsius GPS robot to operate on Maxwell D. Nalder "
-         "at Merit Health River Oaks in Mississippi.", "Walsh"),
-        ("The plaintiff Dawn May Bunch was injured by the machine.", "Bunch"),
+        ("On April 25, 2019, Callum McTavish was driving a Tesla when he dropped his phone.", "McTavish"),
+        ("Dr. Helen R. Varga used a Globus Excelsius GPS robot to operate on Peter J. Osterman "
+         "at Merit Health River Oaks in Mississippi.", "Osterman"),
+        ("Dr. Helen R. Varga used a Globus Excelsius GPS robot to operate on Peter J. Osterman "
+         "at Merit Health River Oaks in Mississippi.", "Varga"),
+        ("The plaintiff Ruth May Pellow was injured by the machine.", "Pellow"),
     ]:
         out, _ = strip_private_names(text, protected=known | {"Globus Medical"})
         ok &= check(f"removed: {gone}", gone not in (out or ""))
     for text, must_keep in [
-        ("Dr. Kelsey A. Walsh used a Globus Excelsius GPS robot to operate on a patient "
+        ("Dr. Helen R. Varga used a Globus Excelsius GPS robot to operate on a patient "
          "at Merit Health River Oaks in Mississippi.", "Globus Excelsius"),
-        ("Dr. Kelsey A. Walsh used a robot to operate on a patient at Merit Health River Oaks.", "Merit Health River Oaks"),
+        ("Dr. Helen R. Varga used a robot to operate on a patient at Merit Health River Oaks.", "Merit Health River Oaks"),
         ("The passenger was injured on Rosa L. Jones Drive in Cocoa, Florida.", "Rosa L. Jones Drive"),
         ("The veteran was treated at the Ralph H. Johnson VAMC after the injury.", "Ralph H. Johnson VAMC"),
         ("His wife sued under the Federal Tort Claims Act after he was injured.", "Federal Tort Claims Act"),

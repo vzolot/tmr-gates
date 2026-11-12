@@ -550,25 +550,26 @@ def _parse_date(value) -> date | None:
 # The names of private individuals are cut out by code, not only by the prompt:
 # a prompt can be talked around by phrasing, a regular expression cannot.
 _TITLE_PREFIX = r"(?:Mr|Mrs|Ms|Dr|Prof|Officer|Judge|Sheriff|Sen|Rep|Gov)\.?\s+"
-# Two or three capitalised words. Three, because "Regina Allen Elsea" under the
-# two-word pattern became "a person Elsea", leaving the surname on the page. A
-# middle initial counts as a word too.
-# A name word: capitalised, possibly with a capital inside (McGee, DeSantis,
-# MacArthur) or an apostrophe (O'Brien). "George McGee" used to match as
-# "George Mc", and the page showed "a personGee" (TMR-0891, 2026-10-22).
+# Two or three capitalised words. Three, because a name like "Maria Ann Kowalczyk"
+# under the two-word pattern became "a person Kowalczyk", leaving the surname on the
+# page. A middle initial counts as a word too. (Names in these comments and in the
+# tests are invented.)
+# A name word: capitalised, possibly with a capital inside (McTavish, DeSantis,
+# MacArthur) or an apostrophe (O'Brien). A name like "Callum McTavish" used to
+# match as "Callum Mc", and the page showed "a personTavish" (TMR-0891, 2026-10-22).
 _NAME_TOKEN = r"[A-Z][a-z]{1,15}(?:(?:'|)[A-Z][a-z]{1,15})?"
 _NAME = rf"{_NAME_TOKEN}(?:\s+(?:[A-Z]\.|{_NAME_TOKEN}))(?:\s+[A-Z][a-z]{{2,20}}(?:[A-Z][a-z]{{1,15}})?)?"
 
 # An age next to a name is the strongest sign of a private individual in this
-# corpus: "Regina Allen Elsea, 20, was killed", "Christopher C. Pardue, 71,
+# corpus: "Maria Ann Kowalczyk, 20, was killed", "Thomas J. Wardell, 71,
 # died". This also catches what the general pattern does not see: a single word
-# ("Ramanjaneyulu") and non-Latin spellings.
+# ("Venkatesulu") and non-Latin spellings.
 _NAME_WITH_AGE = re.compile(
     r"\b([^\W\d_][\w'\-]{1,20}(?:\s+(?:[A-Z]\.|[^\W\d_][\w'\-]{1,20})){0,2})"
     r"(?=,\s*\d{1,3}\s*,)"
 )
 
-# "a 22-year-old trainee engineer Ramanjaneyulu was killed": the age comes
+# "a 24-year-old welder Venkatesulu was killed": the age comes
 # before the name, so the general pattern does not see it, and a capitalised
 # word after an age construction is almost always the victim.
 # The case-insensitive flag is limited to the group on purpose: (?i) over the
@@ -702,7 +703,7 @@ def strip_private_names(
 
     def _not_a_person(name: str) -> bool:
         """A function word inside the match: "Tesla Model", "Vinci Surgical
-        System". A month in the middle does not count: "Dawn May Bunch" is a
+        System". A month in the middle does not count: "Ruth May Pellow" is a
         person even though May is a month."""
         toks = unarticled(name).split()
         for i, tok in enumerate(toks):
@@ -761,7 +762,7 @@ def strip_private_names(
         # a narrow list of words about a firm: a wide list gave "Nimble Robotics
         # injured John Carter", where the company name two words away protected
         # the person.
-        # A middle initial ("Maxwell D. Nalder") is almost certainly a person:
+        # A middle initial ("Peter J. Osterman") is almost certainly a person:
         # "Health" a few words to the right ("at Merit Health") does not cancel that.
         has_initial = re.search(r"\s[A-Z]\.\s", name) is not None
         if not has_initial and _CORPORATE.search(match.string[match.start() : match.end() + 24]):
