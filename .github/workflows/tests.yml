@@ -2,8 +2,10 @@ name: tests
 on: [push, pull_request]
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # ubuntu-latest став 26.04, і setup-python не має для нього 3.9 (12.11.2026).
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         python: ["3.9", "3.11", "3.13"]
     steps:
