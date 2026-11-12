@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3 (2026-11-13)
+
+- A docstring still quoted a court caption with a plaintiff's surname after 0.2.2; it now describes the case without a name. No rule or threshold changed.
+
 ## 0.2.2 (2026-11-12)
 
 - Comments and tests use invented names. Earlier versions quoted names of private individuals from real cases as examples of what the stripper must remove; no rule or threshold changed.

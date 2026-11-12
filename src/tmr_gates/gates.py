@@ -247,7 +247,7 @@ def min_score(cfg: Config, sources: list[dict]) -> float:
 
     The model rates its confidence by how well the sources agree with each
     other; a single document with no second source honestly gets about 0.8
-    (Velez v. Tesla: 0.82 with date, severity and company), and the general
+    (one lawsuit against Tesla scored 0.82 with date, severity and company), and the general
     threshold of 0.85 would cut off every such lawsuit. The document is a
     primary record in itself, so court_min_verification_score applies to it.
     """
