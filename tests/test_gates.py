@@ -482,6 +482,13 @@ def main() -> int:
     plain = dict(collapse, summary="A delivery robot was not damaged after it struck a curb.")
     ok &= check("subject: negation after the machine word does not deny it", check_robot_subject(plain) is None)
 
+    tanker = dict(collapse, category="autonomous_vehicle",
+                  title="A tanker that lost steering struck a docked American Cruise Lines river cruise ship.",
+                  summary="The cruise ship rolled onto its side.")
+    ok &= check("subject: a cruise line is not Cruise", check_robot_subject(tanker) is not None)
+    cruise = dict(collapse, title="A Cruise vehicle blocked an ambulance in San Francisco.", summary="")
+    ok &= check("subject: Cruise the operator still counts", check_robot_subject(cruise) is None)
+
     print(f"\n{'ALL GATES PASS' if ok else 'GATE TESTS FAILED'}\n")
     return 0 if ok else 1
 

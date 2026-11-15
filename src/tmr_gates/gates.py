@@ -290,12 +290,15 @@ def precheck_sources(*, cfg: Config, sources: list[dict]) -> Decision:
 # an ICE agent, because two independent papers, a date, an outcome and the type
 # "lawsuit" were all in place. The model answers a question about the event, not
 # about whether there is a robot in it; this is checked in code.
+# "Cruise" is the robotaxi company only when capitalised and not a cruise line:
+# on 2026-11-13 a tanker that hit an American Cruise Lines ship published as an
+# autonomous vehicle case.
 _ROBOT_SUBJECT = re.compile(
     r"(?i)\b(robot\w*|cobot\w*|humanoid\w*|robotaxi\w*|autonomous|self-driving|"
     r"driverless|automated (?:guided|vehicle|machine|system|forklift)|\bagv\b|"
     r"exoskeleton\w*|palletis\w*|palletiz\w*|surgical system|da vinci|roomba|"
     r"robo-?vac\w*|lawn ?mower|delivery (?:bot|vehicle|pod)|drone\w*|unmanned|"
-    r"waymo|zoox|cruise|optimus|unitree|starship|nuro|serve robotics|coco|kiwibot|"
+    r"waymo|zoox|(?-i:Cruise)(?!\s+(?:[Ll]ines?|[Ss]hips?|[Ll]iners?|[Tt]erminal|[Pp]ort))|optimus|unitree|starship|nuro|serve robotics|coco|kiwibot|"
     r"boston dynamics|figure ai|agility|digit)\b"
 )
 # A mention that the account itself denies is not a machine. On 2026-11-13 a

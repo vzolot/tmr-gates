@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5 (2026-11-15)
+
+- `check_robot_subject`: "Cruise" counts as the robotaxi company only when capitalised and not followed by Lines, ship, liner, terminal or port. A tanker that struck an American Cruise Lines ship had passed as an autonomous vehicle case. Of the published cases with a recorded verification, only that case changes verdict.
+
 ## 0.2.4 (2026-11-15)
 
 - `check_robot_subject`: a machine word the account itself denies no longer counts as a machine. A negation (no, not, never, without, neither, nor, none) with at most three words before the machine word cancels that mention, so "No robot or autonomous machine is mentioned" fails the gate while "No one was hurt when a Waymo ..." still passes. Found when a building collapse with no machine in it was published. On the 282 cases published on that date the verdict of this gate does not change.
