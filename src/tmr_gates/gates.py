@@ -298,6 +298,15 @@ _ROBOT_SUBJECT = re.compile(
     r"waymo|zoox|cruise|optimus|unitree|starship|nuro|serve robotics|coco|kiwibot|"
     r"boston dynamics|figure ai|agility|digit)\b"
 )
+# A mention that the account itself denies is not a machine. On 2026-11-13 a
+# building collapse with no machine in it published because the verifier's
+# summary ended "No robot or autonomous machine is mentioned in any source",
+# and the word "robot" in that sentence satisfied the check. A negation counts
+# only when at most three words stand between it and the machine word, so
+# "No one was hurt when a Waymo ..." still names a machine.
+_NEGATED_BEFORE = re.compile(
+    r"(?i)\b(?:no|not|never|without|neither|nor|none)\b(?:\W+\w+){0,3}\W+$"
+)
 _ROBOT_CATEGORIES = {
     "autonomous_vehicle", "delivery", "humanoid", "robot_arm", "cobot", "industrial",
     "warehouse_amr", "surgical", "consumer", "service", "agricultural",
@@ -312,8 +321,9 @@ def check_robot_subject(verification: dict) -> str | None:
         str(verification.get(k) or "")
         for k in ("title", "summary", "robot_model", "environment", "company")
     )
-    if _ROBOT_SUBJECT.search(text):
-        return None
+    for m in _ROBOT_SUBJECT.finditer(text):
+        if not _NEGATED_BEFORE.search(text[max(0, m.start() - 40):m.start()]):
+            return None
     return "no commercial robot or automated machine in the account of the event"
 
 

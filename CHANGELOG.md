@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4 (2026-11-15)
+
+- `check_robot_subject`: a machine word the account itself denies no longer counts as a machine. A negation (no, not, never, without, neither, nor, none) with at most three words before the machine word cancels that mention, so "No robot or autonomous machine is mentioned" fails the gate while "No one was hurt when a Waymo ..." still passes. Found when a building collapse with no machine in it was published. On the 282 cases published on that date the verdict of this gate does not change.
+
 ## 0.2.3 (2026-11-13)
 
 - A docstring still quoted a court caption with a plaintiff's surname after 0.2.2; it now describes the case without a name. No rule or threshold changed.

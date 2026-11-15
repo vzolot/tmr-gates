@@ -466,6 +466,22 @@ def main() -> int:
                                today=date(2026, 7, 21), lang="de")
     ok &= check("foreign press: stale waiver does not excuse a missing date", not foreign_no_date.publish)
 
+    # A machine word that the account itself denies does not count (2026-11-13:
+    # a building collapse passed because its summary said "No robot ... is mentioned").
+    from tmr_gates import check_robot_subject
+    collapse = {"category": "other", "robot_model": None, "company": None,
+                "title": "A three-story apartment building collapsed into an adjacent construction site, killing eight people.",
+                "summary": "The cause was under investigation. No robot or autonomous machine is mentioned in any source."}
+    ok &= check("subject: a denied robot is not a robot", check_robot_subject(collapse) is not None)
+    not_a = dict(collapse, summary="Officials said it was not a robot but a manually driven excavator.")
+    ok &= check("subject: 'not a robot' is not a robot", check_robot_subject(not_a) is not None)
+    hurt = dict(collapse, title="No one was hurt when a Waymo robotaxi struck a parked car.", summary="")
+    ok &= check("subject: 'No one was hurt when a Waymo' still names a machine", check_robot_subject(hurt) is None)
+    both = dict(collapse, summary="No robot arm was involved; an AGV struck the worker.")
+    ok &= check("subject: a later undenied machine still counts", check_robot_subject(both) is None)
+    plain = dict(collapse, summary="A delivery robot was not damaged after it struck a curb.")
+    ok &= check("subject: negation after the machine word does not deny it", check_robot_subject(plain) is None)
+
     print(f"\n{'ALL GATES PASS' if ok else 'GATE TESTS FAILED'}\n")
     return 0 if ok else 1
 
